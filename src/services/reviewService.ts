@@ -14,13 +14,18 @@ export class ReviewService {
   }
 
   async createReview(input: {
-    stallId: number;
-    userId: number;
-    rating: number;
-    comment: string;
-  }) {
-    return this.reviewRepository.create(input);
-  }
+  stallId: number;
+  userId: number;
+  rating: number;
+  comment?: string;
+}) {
+  return this.reviewRepository.create({
+    stallId: input.stallId,
+    userId: input.userId,
+    rating: input.rating,
+    comment: input.comment ?? '',
+  });
+}
 
   async deleteReview(id: number) {
     await this.reviewRepository.delete(id);

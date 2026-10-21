@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { StallService } from '../services/stallService.ts';
+import { ForbiddenError } from '../errors/ForbiddenError.ts';
 
 export class StallController {
   private stallService: StallService;
@@ -19,12 +20,20 @@ export class StallController {
     });
   }
 
+ 
   getStalls = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const page = Number(req.query.page) || 1;
-      const limit = Number(req.query.limit) || 10;
-      const search = typeof req.query.search === 'string' ? req.query.search : undefined;
-      const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        category,
+      } = (res.locals.validated?.query ?? {}) as {
+        page?: number;
+        limit?: number;
+        search?: string;
+        category?: string;
+      };
 
       const { data, total } = await this.stallService.getAllStalls({
         search,
@@ -33,11 +42,16 @@ export class StallController {
         limit,
       });
 
-      return res.status(200).json({ status: 'success', meta: { page, limit, total }, data });
+      return res.status(200).json({
+        status: 'success',
+        meta: { page, limit, total },
+        data,
+      });
     } catch (error) {
       return this.handleError(res, error);
     }
   };
+
 
   getStallById = async (req: Request, res: Response): Promise<Response> => {
     try {
@@ -57,23 +71,80 @@ export class StallController {
     }
   };
 
-  createStall = async (req: Request, res: Response): Promise<Response> => {
+  
+  createStall = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     try {
-      const stall = await this.stallService.createStall(req.body);
-      return res.status(201).json({ status: 'success', data: stall });
+      // Identitas pengguna dari JWT
+      const user = res.locals.authUser;
+
+      // Data warung yang sudah divalidasi Zod
+      const input = res.locals.validated?.body ?? req.body;
+
+      // Owner ID ditentukan server, bukan pengguna
+      const stall = await this.stallService.createStall({
+        ...input,
+        ownerId: user.id,
+      });
+
+      return res.status(201).json({
+        status: 'success',
+        data: stall,
+      });
     } catch (error) {
       return this.handleError(res, error);
     }
   };
 
-  updateStall = async (req: Request, res: Response): Promise<Response> => {
+
+  
+  updateStall = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     try {
-      const stall = await this.stallService.updateStall(Number(req.params.id), req.body);
-      return res.status(200).json({ status: 'success', data: stall });
+      const stallId = Number(req.params.id);
+      const user = res.locals.authUser;
+
+      // Ambil data warung dari database
+      const stall = await this.stallService.getStallById(stallId);
+
+      // Owner hanya boleh mengedit warung miliknya
+      if (
+        user.role !== 'admin' &&
+        Number(stall.ownerId) !== user.id
+      ) {
+        throw new ForbiddenError(
+          'Anda hanya boleh mengedit warung milik sendiri'
+        );
+      }
+
+      // Gunakan data yang sudah divalidasi Zod
+      const input = res.locals.validated?.body ?? req.body;
+
+      const updatedStall = await this.stallService.updateStall(
+        stallId,
+        input
+      );
+
+      return res.status(200).json({
+        status: 'success',
+        data: updatedStall,
+      });
     } catch (error) {
+      if (error instanceof ForbiddenError) {
+        return res.status(403).json({
+          status: 'fail',
+          message: error.message,
+        });
+      }
+
       return this.handleError(res, error);
     }
   };
+
 
   deleteStall = async (req: Request, res: Response): Promise<Response> => {
     try {

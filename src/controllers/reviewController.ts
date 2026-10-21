@@ -1,5 +1,6 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { ReviewService } from '../services/reviewService.ts';
+import { UnauthorizedError } from '../errors/UnauthorizedError.ts';
 
 export class ReviewController {
   private reviewService: ReviewService;
@@ -27,22 +28,42 @@ export class ReviewController {
     }
   };
 
-  createReview = async (req: Request, res: Response): Promise<Response> => {
+  
+  createReview = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const review = await this.reviewService.createReview(req.body);
+      // Ambil identitas pengguna dari JWT
+      const user = res.locals.authUser;
 
-      return res.status(201).json({
+      if (!user) {
+        throw new UnauthorizedError('Autentikasi diperlukan');
+      }
+
+      // Ambil ID warung dari URL
+      const stallId = Number(req.params.id);
+
+      // Ambil rating dan comment dari hasil validasi Zod
+      const input = res.locals.validated?.body ?? req.body;
+
+      const review = await this.reviewService.createReview({
+        stallId,
+        userId: user.id,
+        rating: input.rating,
+        comment: input.comment,
+      });
+
+      res.status(201).json({
         status: 'success',
         data: review,
       });
     } catch (error) {
-      return res.status(500).json({
-        status: 'error',
-        message: 'Gagal membuat review',
-        error: error instanceof Error ? error.message : String(error),
-      });
+      next(error);
     }
   };
+
 
   deleteReview = async (req: Request, res: Response): Promise<Response> => {
     try {

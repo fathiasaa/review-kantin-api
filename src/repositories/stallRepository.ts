@@ -65,21 +65,35 @@ export class StallRepository {
     return rows[0];
   }
 
+  
   async update(id: number, input: Partial<CreateStallInput>) {
     const db = await getDb();
+
     const rows = await db
       .update(stalls)
       .set({
-        ...(input.ownerId !== undefined ? { ownerId: input.ownerId } : {}),
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.category !== undefined ? { category: input.category } : {}),
-        ...(input.location !== undefined ? { location: input.location } : {}),
-        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.name !== undefined
+          ? { name: input.name }
+          : {}),
+
+        ...(input.category !== undefined
+          ? { category: input.category }
+          : {}),
+
+        ...(input.location !== undefined
+          ? { location: input.location }
+          : {}),
+
+        ...(input.description !== undefined
+          ? { description: input.description }
+          : {}),
       })
       .where(eq(stalls.id, id))
       .output();
+
     return rows[0];
   }
+
 
   async remove(id: number) {
     const db = await getDb();

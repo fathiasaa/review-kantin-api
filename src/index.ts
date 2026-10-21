@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { type Request, type Response, type Application } from 'express';
 import { sql } from 'drizzle-orm';
 import swaggerUi from 'swagger-ui-express';
@@ -10,7 +11,8 @@ import { reviewRouter } from './routes/reviewRouter.ts';
 import { likeRouter } from './routes/likeRouter.ts';
 import { flagRouter } from './routes/flagRouter.ts';
 import { auditRouter } from './routes/auditRouter.ts';
-
+import { errorHandler } from './middlewares/errorHandler.ts';
+import { authRouter } from './routes/authRouter.ts';
 
 const app: Application = express();
 const PORT: number = 3000;
@@ -41,6 +43,8 @@ app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/likes', likeRouter);
 app.use('/api/v1/flags', flagRouter);
 app.use('/api/v1/audit', auditRouter);
+app.use('/api/v1/auth', authRouter);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);

@@ -34,6 +34,26 @@ export class UserRepository {
     return rows[0];
   }
 
+  
+  async findByEmail(email: string) {
+    const db = await getDb();
+
+    const rows = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        passwordHash: users.passwordHash,
+        role: users.role,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(eq(users.email, email));
+
+    return rows[0];
+  }
+
+
   async create(input: {
     name: string;
     email: string;

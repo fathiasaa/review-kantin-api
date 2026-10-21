@@ -15,6 +15,14 @@
   "schemes": [
     "http"
   ],
+  "securityDefinitions": {
+    "bearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Masukkan Bearer diikuti spasi dan token JWT"
+    }
+  },
   "paths": {
     "/health": {
       "get": {
@@ -64,6 +72,11 @@
         "description": "",
         "parameters": [
           {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
@@ -75,8 +88,19 @@
         "responses": {
           "201": {
             "description": "Warung dibuat"
+          },
+          "401": {
+            "description": "Token JWT diperlukan"
+          },
+          "403": {
+            "description": "Akses ditolak karena role tidak sesuai"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/stalls/{id}": {
@@ -109,6 +133,11 @@
             "type": "integer"
           },
           {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
@@ -121,10 +150,21 @@
           "200": {
             "description": "Warung ter-update"
           },
+          "401": {
+            "description": "Token JWT diperlukan atau tidak valid"
+          },
+          "403": {
+            "description": "Akses ditolak"
+          },
           "404": {
             "description": "Tidak ditemukan"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "delete": {
         "description": "",
@@ -134,16 +174,32 @@
             "in": "path",
             "required": true,
             "type": "integer"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
           }
         ],
         "responses": {
           "200": {
             "description": "Warung terhapus"
           },
+          "401": {
+            "description": "Token JWT diperlukan atau tidak valid"
+          },
+          "403": {
+            "description": "Hanya admin yang boleh menghapus warung"
+          },
           "404": {
             "description": "Tidak ditemukan"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/stalls/{id}/menus": {
@@ -165,6 +221,65 @@
             "description": "Tidak ditemukan"
           }
         }
+      }
+    },
+    "/api/v1/stalls/{id}/reviews": {
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Membuat review warung",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rating": {
+                  "type": "number",
+                  "example": 5
+                },
+                "comment": {
+                  "type": "string",
+                  "example": "Makanannya enak"
+                }
+              },
+              "required": [
+                "rating"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Review berhasil dibuat"
+          },
+          "400": {
+            "description": "Validasi gagal"
+          },
+          "401": {
+            "description": "Token JWT diperlukan"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/users/": {
@@ -322,25 +437,6 @@
             "description": "Daftar review dengan nama user"
           }
         }
-      },
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Review dibuat"
-          }
-        }
       }
     },
     "/api/v1/reviews/{id}": {
@@ -352,13 +448,29 @@
             "in": "path",
             "required": true,
             "type": "integer"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
           }
         ],
         "responses": {
           "200": {
-            "description": "Review dihapus"
+            "description": "Review berhasil dihapus"
+          },
+          "401": {
+            "description": "Token JWT diperlukan"
+          },
+          "403": {
+            "description": "Hanya admin yang boleh menghapus review"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/likes/": {
@@ -468,16 +580,92 @@
           }
         }
       }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Registrasi pengguna baru",
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RegisterInput"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Registrasi berhasil"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login pengguna",
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login berhasil"
+          },
+          "401": {
+            "description": "Email atau password salah"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Melihat profil pengguna yang login",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profil pengguna"
+          },
+          "401": {
+            "description": "Token tidak valid atau tidak ada"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "definitions": {
     "StallInput": {
       "type": "object",
       "properties": {
-        "ownerId": {
-          "type": "number",
-          "example": 2
-        },
         "name": {
           "type": "string",
           "example": "Warung Baru"
@@ -496,8 +684,46 @@
         }
       },
       "required": [
-        "ownerId",
         "name"
+      ]
+    },
+    "RegisterInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "Pengguna Baru"
+        },
+        "email": {
+          "type": "string",
+          "example": "pengguna@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "ContohPassword123"
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "password"
+      ]
+    },
+    "LoginInput": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "example": "pengguna@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "ContohPassword123"
+        }
+      },
+      "required": [
+        "email",
+        "password"
       ]
     }
   }
