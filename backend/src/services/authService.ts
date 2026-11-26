@@ -12,13 +12,18 @@ export class AuthService {
     email: string;
     password: string;
   }) {
-    const existingUser = await this.userRepository.findByEmail(input.email);
+    const existingUser = await this.userRepository.findByEmail(
+      input.email
+    );
 
     if (existingUser) {
       throw new AppError(409, 'Email sudah terdaftar');
     }
 
-    const passwordHash = await bcrypt.hash(input.password, 10);
+    const passwordHash = await bcrypt.hash(
+      input.password,
+      10
+    );
 
     return this.userRepository.create({
       name: input.name,
@@ -32,7 +37,9 @@ export class AuthService {
     email: string;
     password: string;
   }) {
-    const user = await this.userRepository.findByEmail(input.email);
+    const user = await this.userRepository.findByEmail(
+      input.email
+    );
 
     if (!user) {
       throw new AppError(401, 'Email atau password salah');
@@ -65,11 +72,19 @@ export class AuthService {
     return {
       token,
       tokenType: 'Bearer',
+
+      // Hanya untuk kebutuhan internal controller
+      auditUser: {
+        id: user.id,
+        role: user.role,
+      },
     };
   }
 
   async getMe(userId: number) {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(
+      userId
+    );
 
     if (!user) {
       throw new AppError(401, 'Pengguna tidak ditemukan');

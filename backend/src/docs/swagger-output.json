@@ -345,6 +345,11 @@
         "description": "",
         "parameters": [
           {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
@@ -357,8 +362,16 @@
         "responses": {
           "201": {
             "description": "Menu dibuat"
+          },
+          "401": {
+            "description": "Token tidak valid"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/menu-items/{id}": {
@@ -391,6 +404,11 @@
             "type": "integer"
           },
           {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
@@ -407,7 +425,12 @@
           "404": {
             "description": "Menu tidak ditemukan"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "delete": {
         "description": "",
@@ -417,6 +440,11 @@
             "in": "path",
             "required": true,
             "type": "integer"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
           }
         ],
         "responses": {
@@ -426,7 +454,12 @@
           "404": {
             "description": "Menu tidak ditemukan"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/reviews/": {
@@ -554,31 +587,127 @@
     },
     "/api/v1/audit/": {
       "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "Daftar audit log"
-          }
-        }
-      },
-      "post": {
+        "tags": [
+          "Audit Logs"
+        ],
+        "summary": "Menampilkan daftar audit log",
         "description": "",
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "Filter berdasarkan user ID"
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "Filter berdasarkan target ID"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "Filter berdasarkan action (LOGIN, LOGOUT, CREATE_MENU, UPDATE_MENU, DELETE_MENU)"
+          },
+          {
+            "name": "targetTable",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "Filter berdasarkan nama tabel"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "Tanggal mulai (YYYY-MM-DD)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "Tanggal akhir (YYYY-MM-DD)"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "Nomor halaman",
+            "default": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "Jumlah data per halaman (maksimal 100)",
+            "default": 20
           }
         ],
         "responses": {
-          "201": {
-            "description": "Audit log dibuat"
+          "200": {
+            "description": "Daftar audit log"
+          },
+          "401": {
+            "description": "Token tidak valid atau tidak tersedia"
+          },
+          "403": {
+            "description": "Akses hanya untuk Admin"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/audit/{id}": {
+      "get": {
+        "tags": [
+          "Audit Logs"
+        ],
+        "summary": "Menampilkan detail audit log berdasarkan ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail audit log ditemukan"
+          },
+          "404": {
+            "description": "Audit log tidak ditemukan"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/auth/register": {
@@ -649,6 +778,35 @@
         "responses": {
           "200": {
             "description": "Profil pengguna"
+          },
+          "401": {
+            "description": "Token tidak valid atau tidak ada"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout pengguna",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logout berhasil"
           },
           "401": {
             "description": "Token tidak valid atau tidak ada"

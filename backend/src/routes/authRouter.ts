@@ -64,5 +64,19 @@ authRouter.get(
   }
 );
 
+// POST /auth/logout
+authRouter.post(
+  '/logout',
+  authenticate,
+  (req, res, next) => {
+    // #swagger.tags = ['Auth']
+    // #swagger.summary = 'Logout pengguna'
+    // #swagger.security = [{ "bearerAuth": [] }]
+    // #swagger.responses[200] = { description: 'Logout berhasil' }
+    // #swagger.responses[401] = { description: 'Token tidak valid atau tidak ada' }
+
+    return authController.logout(req, res, next);
+  }
+);
 
 export { authRouter };

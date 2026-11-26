@@ -9,8 +9,21 @@ export class AuditService {
     this.auditRepository = auditRepository;
   }
 
-  async getAuditLogs() {
-    return this.auditRepository.findAll();
+  async getAuditLogs(filters?: {
+    userId?: number;
+    targetId?: number;
+    page?: number;
+    pageSize?: number;
+    action?: string;
+    targetTable?: string;
+    from?: string;
+    to?: string;
+  }) {
+    return this.auditRepository.findAll(filters);
+  }
+
+  async findAuditLogById(id: number) {
+    return this.auditRepository.findById(id);
   }
 
   async createAuditLog(input: {
