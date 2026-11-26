@@ -1,4 +1,3 @@
-
 # Review Kantin — Full-Stack Web Application
 
 Review Kantin adalah aplikasi web untuk menampilkan dan mengelola informasi warung kantin. Aplikasi ini dikembangkan menggunakan React sebagai frontend, Express.js sebagai backend REST API, serta Microsoft SQL Server sebagai database.
@@ -8,6 +7,7 @@ Proyek ini dikembangkan secara bertahap untuk memenuhi tugas Praktikum Rekayasa 
 - **Tugas 2:** Pengembangan REST API dan integrasi database.
 - **Tugas 3:** Validasi data, penanganan error, autentikasi JWT, dan otorisasi.
 - **Tugas 4:** Pengembangan frontend React dan integrasi dengan backend.
+- **Tugas 5:** Audit Log, pencatatan aktivitas, filter, pagination, detail log, dan keamanan data audit.
 
 ## 1. Teknologi yang Digunakan
 
@@ -72,7 +72,7 @@ review-kantin-api/
 └── README.md
 ```
 
-Folder `backend/` berisi REST API, autentikasi, otorisasi, validasi, dan akses database.
+Folder `backend/` berisi REST API, autentikasi, otorisasi, validasi, pencatatan Audit Log, dan akses database.
 
 Folder `frontend/` berisi antarmuka pengguna berbasis React serta service untuk mengakses REST API.
 
@@ -124,6 +124,27 @@ Frontend React menyediakan:
 - Notifikasi keberhasilan operasi.
 - Konfirmasi sebelum menghapus warung.
 
+### 3.5. Audit Log
+
+Aplikasi menyediakan fitur Audit Log untuk mencatat aktivitas pengguna dan perubahan data yang terjadi dalam sistem.
+
+Audit Log menyimpan informasi aktivitas, meliputi:
+
+- User ID yang melakukan aktivitas.
+- Jenis aktivitas (`action`).
+- Tabel target aktivitas.
+- ID data yang menjadi target.
+- Metadata aktivitas.
+- IP address.
+- User-Agent.
+- Waktu aktivitas.
+
+Aktivitas yang dicatat mencakup LOGIN, LOGOUT, serta operasi perubahan data tertentu, seperti CREATE_MENU, UPDATE_MENU, dan DELETE_MENU.
+
+Admin dapat melihat daftar aktivitas, melakukan pencarian menggunakan filter, membuka detail aktivitas, serta menelusuri data melalui pagination.
+
+Audit Log dilindungi dengan autentikasi dan otorisasi Admin. Selain itu, tabel AUDIT_LOGS menerapkan mekanisme append-only untuk menjaga integritas riwayat aktivitas. Catatan audit yang sudah tersimpan tidak dapat diubah atau dihapus melalui operasi UPDATE maupun DELETE karena ditolak oleh trigger database.
+
 ## 4. Role dan Hak Akses
 
 Sistem menggunakan Role-Based Access Control (RBAC).
@@ -138,6 +159,8 @@ Sistem menggunakan Role-Based Access Control (RBAC).
 | Mengedit warung milik pengguna lain | Ya | Tidak | Tidak | Tidak |
 | Menghapus warung | Ya | Tidak | Tidak | Tidak |
 | Melihat profil akun | Ya | Ya | Ya | Tidak |
+| Melihat daftar Audit Log | Ya | Tidak | Tidak | Tidak |
+| Melihat detail Audit Log | Ya | Tidak | Tidak | Tidak |
 
 Frontend menyesuaikan tampilan tombol berdasarkan role pengguna.
 
@@ -162,6 +185,10 @@ Database memiliki tujuh tabel utama:
 | AUDIT_LOGS | Menyimpan catatan aktivitas sistem |
 
 Frontend Tugas 4 berfokus pada pengelolaan warung dan autentikasi pengguna. Endpoint untuk tabel lainnya tetap menjadi bagian dari backend.
+
+Tabel `AUDIT_LOGS` digunakan untuk menyimpan riwayat aktivitas pengguna dan perubahan data dalam sistem. Pencatatan audit dilakukan oleh backend, sedangkan informasi pengguna dapat dihubungkan dengan tabel USERS ketika data audit ditampilkan.
+
+Tabel AUDIT_LOGS menerapkan mekanisme append-only untuk menjaga integritas riwayat aktivitas. Operasi UPDATE dan DELETE terhadap catatan audit ditolak oleh trigger database.
 
 Database dan struktur tabel harus sudah tersedia sebelum aplikasi dijalankan.
 
@@ -206,13 +233,13 @@ Sesuaikan konfigurasi koneksi SQL Server, database, dan JWT secret dengan lingku
 
 Contoh kategori konfigurasi yang diperlukan:
 
-- Server SQL Server
-- Port database
-- Nama database
-- Kredensial koneksi database
-- JWT secret
+- Server SQL Server.
+- Port database.
+- Nama database.
+- Kredensial koneksi database.
+- JWT secret.
 
-**Jangan menyimpan password atau JWT secret asli di repository GitHub.**
+**Jangan menyimpan password atau JWT secret asli di repository Git.**
 
 Jalankan backend:
 
@@ -339,17 +366,71 @@ GET /api/v1/stalls?search=Bu%20Tini
 GET /api/v1/stalls?category=Mie
 ```
 
+### 8.3. Audit Log
+
+Endpoint Audit Log hanya dapat diakses oleh pengguna dengan role Admin yang telah terautentikasi.
+
+| Method | Endpoint | Keterangan | Hak Akses |
+|---|---|---|---|
+| GET | `/api/v1/audit-logs` | Mengambil daftar Audit Log | Admin |
+| GET | `/api/v1/audit-logs/:id` | Mengambil detail Audit Log berdasarkan ID | Admin |
+
+Endpoint daftar Audit Log mendukung filter dan pagination melalui query parameter:
+
+| Parameter | Keterangan |
+|---|---|
+| `userId` | Memfilter berdasarkan ID pengguna |
+| `targetId` | Memfilter berdasarkan ID data target |
+| `action` | Memfilter jenis aktivitas |
+| `targetTable` | Memfilter nama tabel target |
+| `from` | Menentukan tanggal awal pencarian |
+| `to` | Menentukan tanggal akhir pencarian |
+| `page` | Menentukan halaman yang ditampilkan |
+| `pageSize` | Menentukan jumlah data per halaman |
+
+Contoh request:
+
+```http
+GET /api/v1/audit-logs?page=1&pageSize=20
+
+GET /api/v1/audit-logs?userId=1
+
+GET /api/v1/audit-logs?targetId=37
+
+GET /api/v1/audit-logs?action=DELETE_MENU
+
+GET /api/v1/audit-logs?targetTable=MENU_ITEMS
+
+GET /api/v1/audit-logs?from=2026-11-21&to=2026-11-21
+
+GET /api/v1/audit-logs?userId=1&targetId=37&action=UPDATE_MENU
+```
+
+Filter dapat digunakan secara individual maupun dikombinasikan. Pagination diterapkan pada query database sehingga data yang ditampilkan disesuaikan dengan filter dan halaman yang diminta.
+
+Endpoint daftar Audit Log mengembalikan data aktivitas beserta informasi pagination, seperti halaman saat ini, jumlah data per halaman, total data, dan total halaman.
+
+Endpoint detail Audit Log menampilkan informasi aktivitas secara lebih lengkap, termasuk metadata aktivitas dan informasi pendukung seperti IP address serta User-Agent.
+
+Akses endpoint Audit Log dilindungi oleh middleware autentikasi JWT dan otorisasi Admin. Pengguna tanpa autentikasi ditolak, sedangkan pengguna dengan role selain Admin tidak memiliki izin untuk mengakses endpoint tersebut.
+
 ## 9. Validasi, Autentikasi, dan Otorisasi
 
 ### Validasi Input
 
 Backend menggunakan Zod untuk memvalidasi data yang diterima API.
 
+Validasi dilakukan untuk memastikan data yang masuk sesuai dengan format dan ketentuan yang ditetapkan oleh endpoint.
+
+Pada endpoint Audit Log, validasi juga diterapkan pada query parameter, termasuk ID pengguna, ID target, filter aktivitas, rentang tanggal, serta pagination.
+
 ### Autentikasi JWT
 
 Pengguna melakukan login untuk memperoleh token JWT.
 
 Token digunakan saat mengakses endpoint yang memerlukan autentikasi.
+
+Backend memeriksa validitas token sebelum melanjutkan request ke endpoint yang dilindungi.
 
 ### Otorisasi
 
@@ -363,15 +444,21 @@ Contoh penerapan:
 - Owner tidak dapat menghapus warung.
 - Admin dapat mengelola seluruh warung.
 
+Selain otorisasi pada fitur manajemen warung, sistem menerapkan pembatasan akses pada Audit Log. Endpoint Audit Log hanya dapat diakses oleh Admin melalui middleware `authenticate` dan `authorize('admin')`.
+
+Backend memastikan pencatatan aktivitas menggunakan identitas pengguna yang telah terautentikasi, sehingga identitas pelaku audit tidak bergantung pada User ID yang dikirim bebas oleh client.
+
+Database juga menerapkan mekanisme append-only pada tabel AUDIT_LOGS untuk mencegah perubahan dan penghapusan catatan audit yang telah tersimpan.
+
 ### Penanganan Error
 
 Sistem membedakan respons error, termasuk:
 
-- HTTP 400 — Bad Request
-- HTTP 401 — Unauthorized
-- HTTP 403 — Forbidden
-- HTTP 404 — Not Found
-- HTTP 500 — Internal Server Error
+- HTTP 400 — Bad Request.
+- HTTP 401 — Unauthorized.
+- HTTP 403 — Forbidden.
+- HTTP 404 — Not Found.
+- HTTP 500 — Internal Server Error.
 
 Frontend menampilkan pesan yang sesuai ketika request gagal.
 
@@ -425,6 +512,56 @@ Pengujian dilakukan melalui React, Swagger UI, dan SQL Server Management Studio.
 - Verifikasi data UPDATE di SQL Server.
 - Verifikasi data DELETE di SQL Server.
 
+### Pengujian Audit Log
+
+Pengujian Audit Log dilakukan melalui Swagger UI, frontend, dan SQL Server Management Studio.
+
+#### Pengujian Pencatatan Aktivitas
+
+- Audit LOGIN berhasil tercatat.
+- Audit LOGOUT berhasil tercatat.
+- Metadata aktivitas mencakup informasi pendukung seperti IP address dan User-Agent.
+- Aktivitas CREATE_MENU, UPDATE_MENU, dan DELETE_MENU tercatat pada Audit Log.
+
+#### Pengujian Endpoint dan Hak Akses
+
+- Admin dapat mengakses daftar Audit Log.
+- Admin dapat mengakses detail Audit Log.
+- Detail Audit Log dengan ID yang tidak ditemukan mengembalikan HTTP 404.
+- Pengguna dengan role non-admin ditolak ketika mengakses endpoint Audit Log.
+- Endpoint Audit Log memerlukan autentikasi JWT.
+
+#### Pengujian Filter dan Pagination
+
+- Filter berdasarkan userId.
+- Filter berdasarkan targetId.
+- Filter berdasarkan action.
+- Filter berdasarkan targetTable.
+- Filter rentang tanggal.
+- Kombinasi beberapa filter.
+- Pagination dan perhitungan total data.
+- Urutan data berdasarkan aktivitas terbaru.
+
+#### Pengujian Frontend
+
+- Menampilkan daftar Audit Log.
+- Filter berdasarkan User ID dan Target ID.
+- Reset filter.
+- Berpindah halaman melalui pagination.
+- Membuka detail Audit Log melalui modal.
+- Menampilkan metadata aktivitas.
+- Menampilkan informasi IP address dan User-Agent.
+- Menangani loading ketika mengambil detail Audit Log.
+- Menampilkan pesan error ketika request detail gagal.
+
+#### Pengujian Append-Only Database
+
+- Trigger append-only pada tabel AUDIT_LOGS aktif.
+- Operasi UPDATE terhadap AUDIT_LOGS ditolak oleh trigger.
+- Operasi DELETE terhadap AUDIT_LOGS ditolak oleh trigger.
+
+Pengujian dilakukan dengan memastikan operasi UPDATE dan DELETE menghasilkan pesan penolakan dari trigger database yang menyatakan bahwa AUDIT_LOGS bersifat append-only.
+
 ## 11. Build Frontend
 
 Masuk ke folder frontend:
@@ -464,16 +601,18 @@ File `.env.example` boleh disertakan sebagai panduan konfigurasi, tetapi tidak b
 
 Akun dan password pengujian juga tidak dicantumkan dalam README.
 
+Data Audit Log dilindungi melalui autentikasi dan otorisasi backend. Selain itu, trigger append-only pada database menolak operasi UPDATE dan DELETE terhadap tabel AUDIT_LOGS.
+
 ## 13. Repository GitHub
 
 Repository proyek:
 
 https://github.com/fathiasaa/review-kantin-api
 
-Repository yang sama digunakan untuk pengembangan Tugas 2, Tugas 3, dan Tugas 4 agar riwayat perubahan proyek tetap terdokumentasi.
+Repository yang sama digunakan untuk pengembangan Tugas 2, Tugas 3, Tugas 4, dan Tugas 5 agar riwayat perubahan proyek tetap terdokumentasi.
 
 ## 14. Keterangan
 
 Proyek Review Kantin dikembangkan untuk memenuhi tugas Praktikum Rekayasa Sistem Informasi.
 
-Pengembangan mencakup perancangan REST API, integrasi database, validasi, autentikasi, otorisasi, pengembangan frontend React, serta pengujian komunikasi antara frontend dan backend.
+Pengembangan mencakup perancangan REST API, integrasi database, validasi, autentikasi, otorisasi, pengembangan frontend React, pencatatan aktivitas melalui Audit Log, perlindungan integritas data audit, serta pengujian komunikasi antara frontend dan backend.

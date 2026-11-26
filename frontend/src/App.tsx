@@ -21,6 +21,7 @@ import LoginForm from './components/LoginForm'
 import CreateStallForm from './components/CreateStallForm'
 import EditStallForm from './components/EditStallForm'
 import DeleteStallButton from './components/DeleteStallButton'
+import AuditLog from './components/AuditLog'
 
 
 
@@ -34,6 +35,7 @@ type PageView =
   | 'account'
   | 'create'
   | 'edit'
+  | 'audit'
 
 
 const colors = {
@@ -354,6 +356,17 @@ function App() {
               Daftar Warung
             </button>
 
+            {/* MENU AUDIT LOG - KHUSUS ADMIN */}
+            {!checkingSession && currentUser?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => navigateTo('audit')}
+                style={secondaryButton}
+              >
+                📋 Audit Log
+              </button>
+            )}
+
             {/* MENU TAMBAH WARUNG */}
             {!checkingSession && canManageStalls && (
               <button
@@ -482,6 +495,28 @@ function App() {
             onSwitchToRegister={() => navigateTo('register')}
             onLoginSuccess={handleLoginSuccess}
           />
+        )}
+
+        {/* AUDIT LOG - KHUSUS ADMIN */}
+        {view === 'audit' && currentUser?.role === 'admin' && (
+          <AuditLog />
+        )}
+
+        {/* AUDIT LOG ACCESS DENIED */}
+        {view === 'audit' && currentUser?.role !== 'admin' && (
+          <section style={{ textAlign: 'center', padding: '40px' }}>
+            <h2>Akses Ditolak</h2>
+            <p style={{ color: colors.muted }}>
+              Hanya Admin yang dapat mengakses Audit Log.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigateTo('home')}
+              style={primaryButton}
+            >
+              Kembali
+            </button>
+          </section>
         )}
 
         {/* =====================================
@@ -978,6 +1013,9 @@ function App() {
                         </option>
 
                         <option value="Mie">Mie</option>
+                        <option value="Nasi">Nasi</option>
+                        <option value="Ayam">Ayam</option>
+                        <option value="Bakso">Bakso</option>
                       </select>
                     </div>
 
